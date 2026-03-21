@@ -1,4 +1,4 @@
-.venv/
+.venv
 __pycache__/
 *.pyc
 *.pyo
@@ -10,4 +10,3 @@ dist/
 .envrc
 CLAUDE.md
 uv.toml
-.venv
