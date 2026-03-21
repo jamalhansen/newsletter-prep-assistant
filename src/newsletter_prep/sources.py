@@ -5,8 +5,10 @@ Reads from:
 - content-discovery SQLite DB: recent kept finds
 """
 
+import os
 import re
 import sqlite3
+import tomllib
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
@@ -208,6 +210,49 @@ def _extract_excerpt(content: str, max_chars: int = 200) -> str:
                 text = text[:max_chars].rsplit(" ", 1)[0] + "…"
             return text
     return ""
+
+
+# ---------------------------------------------------------------------------
+# Content-discovery DB path resolution
+# ---------------------------------------------------------------------------
+
+# Candidate locations for .content-discovery.toml, in search order.
+_TOML_SEARCH_PATHS = [
+    Path("~/.content-discovery.toml"),
+    Path("~/.config/content-discovery/.content-discovery.toml"),
+]
+
+
+def resolve_discovery_db_path(override: str | None = None) -> str:
+    """Return the content-discovery DB path using the same priority chain as the agent itself.
+
+    Priority:
+    1. Explicit override (passed by caller / CLI flag)
+    2. CONTENT_DISCOVERY_STORE env var  (matches content-discovery-agent)
+    3. CONTENT_DISCOVERY_DB env var     (legacy alias used by older tools)
+    4. [settings] store in ~/.content-discovery.toml
+    5. Default: ~/.content-discovery.db
+    """
+    if override:
+        return os.path.expanduser(override)
+
+    env = os.environ.get("CONTENT_DISCOVERY_STORE") or os.environ.get("CONTENT_DISCOVERY_DB")
+    if env:
+        return os.path.expanduser(env)
+
+    for candidate in _TOML_SEARCH_PATHS:
+        toml_path = candidate.expanduser()
+        if toml_path.exists():
+            try:
+                with open(toml_path, "rb") as f:
+                    cfg = tomllib.load(f)
+                store = cfg.get("settings", {}).get("store")
+                if store:
+                    return os.path.expanduser(store)
+            except Exception:
+                pass
+
+    return os.path.expanduser("~/.content-discovery.db")
 
 
 # ---------------------------------------------------------------------------

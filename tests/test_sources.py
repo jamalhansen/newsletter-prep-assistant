@@ -6,6 +6,7 @@ from pathlib import Path
 
 from newsletter_prep.sources import (
     _strip_wikilink,
+    resolve_discovery_db_path,
     find_blog_post_file,
     find_issue_by_number,
     find_next_issue,
@@ -269,6 +270,54 @@ class TestGetKeptFinds:
 # ---------------------------------------------------------------------------
 # get_daily_note_bullets
 # ---------------------------------------------------------------------------
+
+
+class TestResolveDiscoveryDbPath:
+    def test_explicit_override_wins(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("CONTENT_DISCOVERY_STORE", raising=False)
+        monkeypatch.delenv("CONTENT_DISCOVERY_DB", raising=False)
+        db = str(tmp_path / "custom.db")
+        assert resolve_discovery_db_path(db) == db
+
+    def test_env_var_store_wins_over_default(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("CONTENT_DISCOVERY_STORE", str(tmp_path / "from-env.db"))
+        monkeypatch.delenv("CONTENT_DISCOVERY_DB", raising=False)
+        result = resolve_discovery_db_path(None)
+        assert "from-env.db" in result
+
+    def test_legacy_env_var_db_as_fallback(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("CONTENT_DISCOVERY_STORE", raising=False)
+        monkeypatch.setenv("CONTENT_DISCOVERY_DB", str(tmp_path / "legacy.db"))
+        result = resolve_discovery_db_path(None)
+        assert "legacy.db" in result
+
+    def test_reads_toml_store_setting(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("CONTENT_DISCOVERY_STORE", raising=False)
+        monkeypatch.delenv("CONTENT_DISCOVERY_DB", raising=False)
+        toml = tmp_path / ".content-discovery.toml"
+        toml.write_text('[settings]\nstore = "~/sync/discovery.db"\n', encoding="utf-8")
+
+        import newsletter_prep.sources as src_module
+        orig = src_module._TOML_SEARCH_PATHS
+        src_module._TOML_SEARCH_PATHS = [toml]
+        try:
+            result = resolve_discovery_db_path(None)
+        finally:
+            src_module._TOML_SEARCH_PATHS = orig
+
+        assert "sync/discovery.db" in result
+
+    def test_defaults_to_home_db(self, monkeypatch):
+        monkeypatch.delenv("CONTENT_DISCOVERY_STORE", raising=False)
+        monkeypatch.delenv("CONTENT_DISCOVERY_DB", raising=False)
+        import newsletter_prep.sources as src_module
+        orig = src_module._TOML_SEARCH_PATHS
+        src_module._TOML_SEARCH_PATHS = []  # no toml files
+        try:
+            result = resolve_discovery_db_path(None)
+        finally:
+            src_module._TOML_SEARCH_PATHS = orig
+        assert result.endswith(".content-discovery.db")
 
 
 class TestGetDailyNoteBullets:

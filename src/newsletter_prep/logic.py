@@ -1,6 +1,5 @@
 """Typer CLI for newsletter-prep-assistant."""
 
-import os
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Annotated, Optional
@@ -18,6 +17,7 @@ from .sources import (
     get_daily_note_bullets,
     get_kept_finds,
     read_blog_post,
+    resolve_discovery_db_path,
 )
 
 app = typer.Typer(help="Assemble raw materials for the weekly newsletter.")
@@ -56,8 +56,10 @@ def prep(
         Optional[str],
         typer.Option(
             "--discovery-db", "-d",
-            help="Path to content-discovery SQLite DB.",
-            envvar="CONTENT_DISCOVERY_DB",
+            help="Path to content-discovery SQLite DB. "
+                 "Defaults to CONTENT_DISCOVERY_STORE env var, then ~/.content-discovery.toml "
+                 "[settings] store, then ~/.content-discovery.db.",
+            envvar="CONTENT_DISCOVERY_STORE",
         ),
     ] = None,
     finds_limit: Annotated[
@@ -157,7 +159,7 @@ def prep(
     week_start, week_end = _week_dates(date.today())
 
     # ── Kept finds ───────────────────────────────────────────────────────────
-    db_path = discovery_db or os.environ.get("CONTENT_DISCOVERY_DB") or os.path.expanduser("~/.content-discovery.db")
+    db_path = resolve_discovery_db_path(discovery_db)
     finds = get_kept_finds(db_path, limit=finds_limit, since_days=since_days)
     if verbose:
         typer.echo(f"Kept finds: {len(finds)} (from {db_path})")
