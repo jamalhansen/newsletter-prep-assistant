@@ -7,6 +7,7 @@ from typing import Annotated, Optional
 import typer
 
 from local_first_common.obsidian import find_vault_root
+from local_first_common.tracking import register_tool
 
 from .cta import get_cta
 from .renderer import render_prep_kit
@@ -19,6 +20,8 @@ from .sources import (
     read_blog_post,
     resolve_discovery_db_path,
 )
+
+_TOOL = register_tool("newsletter-prep-assistant")
 
 app = typer.Typer(help="Assemble raw materials for the weekly newsletter.")
 
