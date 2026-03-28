@@ -14,6 +14,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import frontmatter
+from local_first_common.models import ContentMetadata
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +99,8 @@ def find_next_issue(vault_root: Path, newsletter_dir: str = "_newsletter") -> Is
             post = frontmatter.load(str(draft))
         except Exception:
             continue
-        published = post.metadata.get("published_date") or post.metadata.get("status", "") == "published"
+        meta = ContentMetadata.from_metadata(post.metadata)
+        published = meta.published_date is not None or meta.status == "published"
         if not published:
             return _parse_issue_meta(num, draft, folder, post)
     # All published — return the last one
@@ -136,13 +138,14 @@ def _parse_issue_meta(num: int, draft: Path, folder: Path, post: frontmatter.Pos
         raw_finds = [raw_finds]
     finds = [_strip_wikilink(s) for s in (raw_finds or []) if s]
 
+    meta = ContentMetadata.from_metadata(post.metadata)
     return IssueMeta(
         issue_number=post.metadata.get("issue_number") or num,
         draft_path=draft,
         issue_folder=folder,
         blog_post_wikilinks=blog_links,
         finds_included=finds,
-        status=post.metadata.get("status", "draft") or "draft",
+        status=meta.status,
     )
 
 
@@ -174,16 +177,17 @@ def find_blog_post_file(vault_root: Path, slug: str) -> Path | None:
 def read_blog_post(file_path: Path) -> BlogPost:
     """Extract BlogPost metadata from a vault file."""
     post = frontmatter.load(str(file_path))
+    meta = ContentMetadata.from_metadata(post.metadata)
     title = (
-        post.metadata.get("title")
-        or post.metadata.get("Title")
+        meta.title
         or _extract_h1(post.content)
         or file_path.stem
     )
+    # canonical_url is standard; url/permalink are legacy aliases kept for older posts
     url = (
-        post.metadata.get("canonical_url")
-        or post.metadata.get("url")
-        or post.metadata.get("permalink")
+        meta.canonical_url
+        or getattr(meta, "url", None)
+        or getattr(meta, "permalink", None)
         or ""
     )
     excerpt = _extract_excerpt(post.content)
