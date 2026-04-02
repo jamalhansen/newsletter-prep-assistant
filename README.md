@@ -25,19 +25,19 @@ uv sync
 
 ```bash
 # Auto-detect next unpublished issue, print to stdout
-uv run python src/main.py prep
+uv run newsletter-prep prep
 
 # Specific issue number
-uv run python src/main.py prep --issue 5
+uv run newsletter-prep prep --issue 5
 
 # Write prep kit into the issue folder
-uv run python src/main.py prep --output path/to/prep-kit.md
+uv run newsletter-prep prep --output path/to/prep-kit.md
 
 # Preview without writing anything
-uv run python src/main.py prep --dry-run
+uv run newsletter-prep prep --dry-run
 
 # Verbose: show what each source found
-uv run python src/main.py prep --verbose
+uv run newsletter-prep prep --verbose
 ```
 
 ## Configuration
