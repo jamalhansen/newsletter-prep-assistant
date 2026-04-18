@@ -214,6 +214,7 @@ def _make_discovery_db(path: Path, items: list[dict]) -> str:
             reviewed_at TEXT
         )"""
     )
+    today = date.today().isoformat()
     for item in items:
         conn.execute(
             "INSERT INTO items (url, title, source, score, summary, status, fetched_at, reviewed_at) "
@@ -225,8 +226,8 @@ def _make_discovery_db(path: Path, items: list[dict]) -> str:
                 item.get("score", 0.9),
                 item.get("summary", ""),
                 item.get("status", "kept"),
-                item.get("fetched_at", "2026-03-18"),
-                item.get("reviewed_at", "2026-03-18T10:00:00+00:00"),
+                item.get("fetched_at", today),
+                item.get("reviewed_at", today),
             ),
         )
     conn.commit()

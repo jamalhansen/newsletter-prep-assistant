@@ -1,15 +1,14 @@
-from local_first_common.config import get_setting
-from local_first_common.cli import init_config_option
 """Typer CLI for newsletter-prep-assistant."""
 
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Optional
 
 import typer
 
 from local_first_common.obsidian import find_vault_root
 from local_first_common.tracking import register_tool
+from local_first_common.cli import init_config_option
 
 from .cta import get_cta
 from .renderer import render_prep_kit
@@ -23,9 +22,9 @@ from .sources import (
     resolve_discovery_db_path,
 )
 
-_TOOL = register_tool("newsletter-prep-assistant")
 TOOL_NAME = "newsletter-prep-assistant"
 DEFAULTS = {"provider": "ollama", "model": "llama3"}
+_TOOL = register_tool("newsletter-prep-assistant")
 
 app = typer.Typer(help="Assemble raw materials for the weekly newsletter.")
 
@@ -39,75 +38,62 @@ def _week_dates(anchor: date) -> tuple[date, date]:
 
 @app.command()
 def prep(
-    issue: Annotated[
-        Optional[int],
-        typer.Option("--issue", "-i", help="Issue number. Default: auto-detect next unpublished issue."),
-    ] = None,
-    vault: Annotated[
-        Optional[str],
-        typer.Option(
-            "--vault", "-V",
-            help="Obsidian vault root path.",
-            envvar="OBSIDIAN_VAULT_PATH",
-        ),
-    ] = None,
-    newsletter_dir: Annotated[
-        str,
-        typer.Option(
-            "--newsletter-dir",
-            help="Newsletter subfolder inside the vault.",
-            envvar="NEWSLETTER_DIR",
-        ),
-    ] = "_newsletter",
-    discovery_db: Annotated[
-        Optional[str],
-        typer.Option(
-            "--discovery-db", "-d",
-            help="Path to content-discovery SQLite DB. "
-                 "Defaults to CONTENT_DISCOVERY_STORE env var, then ~/.content-discovery.toml "
-                 "[settings] store, then ~/.content-discovery.db.",
-            envvar="CONTENT_DISCOVERY_STORE",
-        ),
-    ] = None,
-    finds_limit: Annotated[
-        int,
-        typer.Option(
-            "--finds-limit",
-            help="Max number of kept finds to include.",
-            envvar="NEWSLETTER_FINDS_LIMIT",
-        ),
-    ] = 5,
-    since_days: Annotated[
-        int,
-        typer.Option(
-            "--since-days",
-            help="Look back N days for kept finds.",
-            envvar="NEWSLETTER_FINDS_SINCE_DAYS",
-        ),
-    ] = 14,
-    daily_notes_subdir: Annotated[
-        str,
-        typer.Option(
-            "--notes-subdir",
-            help="Vault subdirectory containing daily notes.",
-            envvar="DAILY_NOTES_SUBDIR",
-        ),
-    ] = "Timeline",
-    output: Annotated[
-        Optional[str],
-        typer.Option(
-            "--output", "-o",
-            help="Write prep kit to this file. Default: print to stdout.",
-        ),
-    ] = None,
-    dry_run: Annotated[
-        bool,
-        typer.Option("--dry-run", "-n", help="Print prep kit to stdout, do not write files."),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Show what each source found."),
-    ] = False,
+    issue: Optional[int] = typer.Option(
+        None, "--issue", "-i", help="Issue number. Default: auto-detect next unpublished issue."
+    ),
+    vault: Optional[str] = typer.Option(
+        None,
+        "--vault",
+        "-V",
+        help="Obsidian vault root path.",
+        envvar="OBSIDIAN_VAULT_PATH",
+    ),
+    newsletter_dir: str = typer.Option(
+        "_newsletter",
+        "--newsletter-dir",
+        help="Newsletter subfolder inside the vault.",
+        envvar="NEWSLETTER_DIR",
+    ),
+    discovery_db: Optional[str] = typer.Option(
+        None,
+        "--discovery-db",
+        "-d",
+        help="Path to content-discovery SQLite DB. "
+        "Defaults to CONTENT_DISCOVERY_STORE env var, then ~/.content-discovery.toml "
+        "[settings] store, then ~/.content-discovery.db.",
+        envvar="CONTENT_DISCOVERY_STORE",
+    ),
+    finds_limit: int = typer.Option(
+        5,
+        "--finds-limit",
+        help="Max number of kept finds to include.",
+        envvar="NEWSLETTER_FINDS_LIMIT",
+    ),
+    since_days: int = typer.Option(
+        14,
+        "--since-days",
+        help="Look back N days for kept finds.",
+        envvar="NEWSLETTER_FINDS_SINCE_DAYS",
+    ),
+    daily_notes_subdir: str = typer.Option(
+        "Timeline",
+        "--notes-subdir",
+        help="Vault subdirectory containing daily notes.",
+        envvar="DAILY_NOTES_SUBDIR",
+    ),
+    output: Optional[str] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Write prep kit to this file. Default: print to stdout.",
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help="Print prep kit to stdout, do not write files."
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show what each source found."
+    ),
+    init_config: bool = init_config_option(TOOL_NAME, DEFAULTS),
 ) -> None:
     """Assemble the newsletter prep kit for the next (or specified) issue.
 

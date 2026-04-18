@@ -17,3 +17,6 @@ uv.toml
 .DS_Store
 .coverage
 .venv/
+
+# Workspace standard ignores
+__pycache__
