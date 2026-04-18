@@ -1,3 +1,5 @@
+from local_first_common.config import get_setting
+from local_first_common.cli import init_config_option
 """Typer CLI for newsletter-prep-assistant."""
 
 from datetime import date, timedelta
@@ -22,6 +24,8 @@ from .sources import (
 )
 
 _TOOL = register_tool("newsletter-prep-assistant")
+TOOL_NAME = "newsletter-prep-assistant"
+DEFAULTS = {"provider": "ollama", "model": "llama3"}
 
 app = typer.Typer(help="Assemble raw materials for the weekly newsletter.")
 
