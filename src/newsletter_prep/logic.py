@@ -29,6 +29,14 @@ _TOOL = register_tool("newsletter-prep-assistant")
 app = typer.Typer(help="Assemble raw materials for the weekly newsletter.")
 
 
+class NewsletterPrepError(Exception):
+    """Base error for newsletter prep strict operations."""
+
+
+class VaultResolutionError(NewsletterPrepError):
+    """Raised when the vault root cannot be resolved or does not exist."""
+
+
 def _week_dates(anchor: date) -> tuple[date, date]:
     """Return (monday, sunday) for the ISO week containing anchor."""
     monday = anchor - timedelta(days=anchor.weekday())
@@ -36,10 +44,30 @@ def _week_dates(anchor: date) -> tuple[date, date]:
     return monday, sunday
 
 
+def _resolve_existing_vault_or_raise(vault: Optional[str]) -> Path:
+    """Resolve the vault root and ensure it exists."""
+    if vault:
+        vault_root = Path(vault).expanduser()
+    else:
+        try:
+            vault_root = find_vault_root()
+        except Exception as e:  # noqa: BLE001
+            raise VaultResolutionError(
+                f"could not locate Obsidian vault. Set OBSIDIAN_VAULT_PATH. ({e})"
+            ) from e
+
+    if not vault_root.exists():
+        raise VaultResolutionError(f"vault path does not exist: {vault_root}")
+    return vault_root
+
+
 @app.command()
 def prep(
     issue: Optional[int] = typer.Option(
-        None, "--issue", "-i", help="Issue number. Default: auto-detect next unpublished issue."
+        None,
+        "--issue",
+        "-i",
+        help="Issue number. Default: auto-detect next unpublished issue.",
     ),
     vault: Optional[str] = typer.Option(
         None,
@@ -103,32 +131,30 @@ def prep(
     """
 
     # ── Resolve vault ────────────────────────────────────────────────────────
-    if vault:
-        vault_root = Path(vault).expanduser()
-    else:
-        try:
-            vault_root = find_vault_root()
-        except Exception as e:
-            typer.secho(f"Error: could not locate Obsidian vault. Set OBSIDIAN_VAULT_PATH. ({e})",
-                        fg=typer.colors.RED, err=True)
-            raise typer.Exit(1)
-
-    if not vault_root.exists():
-        typer.secho(f"Error: vault path does not exist: {vault_root}", fg=typer.colors.RED, err=True)
+    try:
+        vault_root = _resolve_existing_vault_or_raise(vault)
+    except VaultResolutionError as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
 
     # ── Find issue ───────────────────────────────────────────────────────────
     if issue is not None:
         issue_meta = find_issue_by_number(vault_root, issue, newsletter_dir)
         if issue_meta is None:
-            typer.secho(f"Error: issue {issue} not found in {vault_root / newsletter_dir}",
-                        fg=typer.colors.RED, err=True)
+            typer.secho(
+                f"Error: issue {issue} not found in {vault_root / newsletter_dir}",
+                fg=typer.colors.RED,
+                err=True,
+            )
             raise typer.Exit(1)
     else:
         issue_meta = find_next_issue(vault_root, newsletter_dir)
         if issue_meta is None:
-            typer.secho(f"Error: no issues found in {vault_root / newsletter_dir}",
-                        fg=typer.colors.RED, err=True)
+            typer.secho(
+                f"Error: no issues found in {vault_root / newsletter_dir}",
+                fg=typer.colors.RED,
+                err=True,
+            )
             raise typer.Exit(1)
 
     if verbose:
@@ -145,8 +171,11 @@ def prep(
             if verbose:
                 typer.echo(f"Blog post: {bp.title} ({bp.url or 'no URL'})")
         else:
-            typer.secho(f"Warning: blog post file not found for [[{slug}]]",
-                        fg=typer.colors.YELLOW, err=True)
+            typer.secho(
+                f"Warning: blog post file not found for [[{slug}]]",
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
 
     # ── Week dates ───────────────────────────────────────────────────────────
     week_start, week_end = _week_dates(date.today())
@@ -182,18 +211,22 @@ def prep(
     # ── Output ───────────────────────────────────────────────────────────────
     if dry_run or output is None and not _should_write_to_vault():
         typer.echo(kit)
-        typer.echo(f"\nDone. Issue: {issue_meta.issue_number}, "
-                   f"Blog posts: {len(blog_posts)}, Finds: {len(finds)}, "
-                   f"Bullets: {len(bullets)}")
+        typer.echo(
+            f"\nDone. Issue: {issue_meta.issue_number}, "
+            f"Blog posts: {len(blog_posts)}, Finds: {len(finds)}, "
+            f"Bullets: {len(bullets)}"
+        )
         return
 
     out_path = Path(output) if output else _default_output_path(issue_meta)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(kit, encoding="utf-8")
     typer.echo(f"Prep kit written to {out_path}")
-    typer.echo(f"Done. Issue: {issue_meta.issue_number}, "
-               f"Blog posts: {len(blog_posts)}, Finds: {len(finds)}, "
-               f"Bullets: {len(bullets)}")
+    typer.echo(
+        f"Done. Issue: {issue_meta.issue_number}, "
+        f"Blog posts: {len(blog_posts)}, Finds: {len(finds)}, "
+        f"Bullets: {len(bullets)}"
+    )
 
 
 def _should_write_to_vault() -> bool:
