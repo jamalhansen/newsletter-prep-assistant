@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
 
@@ -121,7 +121,7 @@ def prep(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Show what each source found."
     ),
-    init_config: bool = init_config_option(TOOL_NAME, DEFAULTS),
+    init_config: Annotated[bool, init_config_option(TOOL_NAME, DEFAULTS)] = False,
 ) -> None:
     """Assemble the newsletter prep kit for the next (or specified) issue.
 
