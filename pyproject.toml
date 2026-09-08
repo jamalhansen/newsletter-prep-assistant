@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-newsletter-prep = "newsletter_prep.logic:app"
+newsletter-prep = "newsletter_prep.cli:app"
 
 [build-system]
 requires = ["hatchling"]

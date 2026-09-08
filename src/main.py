@@ -1,6 +1,6 @@
-"""Newsletter prep assistant entry point."""
+"""Entry point for newsletter-prep-assistant."""
 
-from newsletter_prep.logic import app
+from newsletter_prep.cli import app
 
 if __name__ == "__main__":
     app()

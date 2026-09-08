@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from newsletter_prep.logic import VaultResolutionError, _resolve_existing_vault_or_raise
+from newsletter_prep.core import VaultResolutionError, _resolve_existing_vault_or_raise
 
 
 class TestResolveExistingVaultOrRaise:
@@ -13,7 +13,7 @@ class TestResolveExistingVaultOrRaise:
 
     def test_raises_when_find_vault_root_fails(self):
         with patch(
-            "newsletter_prep.logic.find_vault_root",
+            "newsletter_prep.core.find_vault_root",
             side_effect=RuntimeError("not found"),
         ):
             with pytest.raises(
@@ -23,6 +23,6 @@ class TestResolveExistingVaultOrRaise:
 
     def test_raises_when_resolved_path_missing(self, tmp_path):
         missing = tmp_path / "missing-vault"
-        with patch("newsletter_prep.logic.find_vault_root", return_value=missing):
+        with patch("newsletter_prep.core.find_vault_root", return_value=missing):
             with pytest.raises(VaultResolutionError, match="vault path does not exist"):
                 _resolve_existing_vault_or_raise(None)
