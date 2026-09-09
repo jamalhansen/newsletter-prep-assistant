@@ -5,6 +5,7 @@ Reads from:
 - content-discovery SQLite DB: recent kept finds
 """
 
+import json
 import os
 import re
 import sqlite3
@@ -53,6 +54,7 @@ class Find:
     summary: str
     source: str
     reviewed_at: str = ""
+    tags: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -129,14 +131,28 @@ def find_issue_by_number(vault_root: Path, issue_number: int, newsletter_dir: st
 def _parse_issue_meta(num: int, draft: Path, folder: Path, post: frontmatter.Post) -> IssueMeta:
     """Extract IssueMeta from a loaded frontmatter Post."""
     raw_bp = post.metadata.get("blog_post", [])
-    if isinstance(raw_bp, str):
-        raw_bp = [raw_bp]
-    blog_links = [_strip_wikilink(s) for s in (raw_bp or []) if s]
+    if isinstance(raw_bp, (str, list)):
+        raw_bp_items = [raw_bp] if isinstance(raw_bp, str) else raw_bp
+    else:
+        raw_bp_items = []
+    blog_links: list[str] = []
+    for item in raw_bp_items:
+        if isinstance(item, list):
+            blog_links.extend(_strip_wikilink(str(s)) for s in item if s)
+        elif item:
+            blog_links.append(_strip_wikilink(str(item)))
 
     raw_finds = post.metadata.get("finds_included", [])
-    if isinstance(raw_finds, str):
-        raw_finds = [raw_finds]
-    finds = [_strip_wikilink(s) for s in (raw_finds or []) if s]
+    if isinstance(raw_finds, (str, list)):
+        raw_finds_items = [raw_finds] if isinstance(raw_finds, str) else raw_finds
+    else:
+        raw_finds_items = []
+    finds: list[str] = []
+    for item in raw_finds_items:
+        if isinstance(item, list):
+            finds.extend(_strip_wikilink(str(s)) for s in item if s)
+        elif item:
+            finds.append(_strip_wikilink(str(item)))
 
     meta = ContentMetadata.from_metadata(post.metadata)
     return IssueMeta(
@@ -264,18 +280,88 @@ def resolve_discovery_db_path(override: str | None = None) -> str:
 # ---------------------------------------------------------------------------
 
 
-def get_kept_finds(db_path: str, limit: int = 5, since_days: int = 14) -> list[Find]:
-    """Return recently kept items from the content-discovery DB, newest first."""
+def get_kept_finds(
+    db_path: str,
+    limit: int = 5,
+    since_days: int = 14,
+    topics: list[str] | None = None,
+    tags: list[str] | None = None,
+) -> list[Find]:
+    """Return kept items from the content-discovery DB.
+
+    If `topics` or `tags` are provided, searches for matching kept items.
+    If no topic/tag matches are found (or none were requested), falls back to
+    the most recently kept items within `since_days`.
+    """
     if not Path(db_path).exists():
         return []
 
-    cutoff = (date.today() - timedelta(days=since_days)).isoformat()
+    target_topics = [t.strip().lower() for t in (topics or []) if t.strip()]
+    target_tags = [t.strip().lower() for t in (tags or []) if t.strip()]
+
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
+
+        # If filtering by topics/tags, search across kept items
+        if target_topics or target_tags:
+            rows = conn.execute(
+                """
+                SELECT title, url, summary, source, reviewed_at, tags, description
+                FROM items
+                WHERE status = 'kept'
+                ORDER BY reviewed_at DESC
+                """
+            ).fetchall()
+
+            matched: list[Find] = []
+            for row in rows:
+                item_tags: list[str] = []
+                try:
+                    item_tags = [
+                        str(t).strip().lower()
+                        for t in json.loads(row["tags"] or "[]")
+                    ]
+                except (json.JSONDecodeError, TypeError, KeyError):
+                    pass
+
+                tag_match = False
+                if target_tags:
+                    tag_match = any(t in item_tags for t in target_tags)
+
+                topic_match = False
+                if target_topics:
+                    searchable = " ".join([
+                        row["title"] or "",
+                        row["summary"] or "",
+                        row["description"] or "",
+                        row["source"] or "",
+                        " ".join(item_tags),
+                    ]).lower()
+                    topic_match = any(t in searchable for t in target_topics)
+
+                if (target_tags and tag_match) or (target_topics and topic_match):
+                    matched.append(
+                        Find(
+                            title=row["title"],
+                            url=row["url"],
+                            summary=row["summary"] or "",
+                            source=row["source"] or "",
+                            reviewed_at=row["reviewed_at"] or "",
+                            tags=item_tags,
+                        )
+                    )
+                    if len(matched) >= limit:
+                        break
+
+            if matched:
+                conn.close()
+                return matched
+
+        cutoff = (date.today() - timedelta(days=since_days)).isoformat()
         rows = conn.execute(
             """
-            SELECT title, url, summary, source, reviewed_at
+            SELECT title, url, summary, source, reviewed_at, tags
             FROM items
             WHERE status = 'kept'
               AND (reviewed_at >= ? OR fetched_at >= ?)
@@ -288,16 +374,27 @@ def get_kept_finds(db_path: str, limit: int = 5, since_days: int = 14) -> list[F
     except sqlite3.Error:
         return []
 
-    return [
-        Find(
-            title=row["title"],
-            url=row["url"],
-            summary=row["summary"] or "",
-            source=row["source"] or "",
-            reviewed_at=row["reviewed_at"] or "",
+    results: list[Find] = []
+    for row in rows:
+        item_tags = []
+        try:
+            item_tags = [
+                str(t).strip().lower()
+                for t in json.loads(row["tags"] or "[]")
+            ]
+        except (json.JSONDecodeError, TypeError, KeyError):
+            pass
+        results.append(
+            Find(
+                title=row["title"],
+                url=row["url"],
+                summary=row["summary"] or "",
+                source=row["source"] or "",
+                reviewed_at=row["reviewed_at"] or "",
+                tags=item_tags,
+            )
         )
-        for row in rows
-    ]
+    return results
 
 
 # ---------------------------------------------------------------------------

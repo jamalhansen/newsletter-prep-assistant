@@ -1,5 +1,6 @@
 """Typer CLI for newsletter-prep-assistant."""
 
+import re
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Annotated, Optional
@@ -76,6 +77,17 @@ def prep(
         "--since-days",
         help="Look back N days for kept finds.",
         envvar="NEWSLETTER_FINDS_SINCE_DAYS",
+    ),
+    topic: Optional[list[str]] = typer.Option(
+        None,
+        "--topic",
+        "-t",
+        help="Filter kept finds by topic keyword(s). Repeatable.",
+    ),
+    tag: Optional[list[str]] = typer.Option(
+        None,
+        "--tag",
+        help="Filter kept finds by tag(s). Repeatable.",
     ),
     daily_notes_subdir: str = typer.Option(
         "Timeline",
@@ -156,7 +168,26 @@ def prep(
 
     # ── Kept finds ───────────────────────────────────────────────────────────
     db_path = resolve_discovery_db_path(discovery_db)
-    finds = get_kept_finds(db_path, limit=finds_limit, since_days=since_days)
+
+    active_topics = list(topic or [])
+    active_tags = list(tag or [])
+    if not active_topics and not active_tags and blog_posts:
+        inferred = []
+        for bp in blog_posts:
+            words = [w.lower() for w in re.findall(r"\b[A-Za-z]{4,}\b", bp.title)]
+            inferred.extend(words[:5])
+        if inferred:
+            active_topics = list(dict.fromkeys(inferred))[:5]
+            if verbose:
+                typer.echo(f"Inferred draft topics: {', '.join(active_topics)}")
+
+    finds = get_kept_finds(
+        db_path,
+        limit=finds_limit,
+        since_days=since_days,
+        topics=active_topics,
+        tags=active_tags,
+    )
     if verbose:
         typer.echo(f"Kept finds: {len(finds)} (from {db_path})")
 

@@ -56,6 +56,9 @@ def render_prep_kit(
             line = f"- [{f.title}]({f.url})"
             if f.summary:
                 line += f" — {f.summary}"
+            if f.tags:
+                tag_str = " ".join(f"#{t}" for t in f.tags)
+                line += f"  `{tag_str}`"
             lines.append(line)
         sections.append("\n".join(lines))
     else:

@@ -217,13 +217,15 @@ def _make_discovery_db(path: Path, items: list[dict]) -> str:
     today = date.today().isoformat()
     for item in items:
         conn.execute(
-            "INSERT INTO items (url, title, source, score, summary, status, fetched_at, reviewed_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO items (url, title, source, description, score, tags, summary, status, fetched_at, reviewed_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 item["url"],
                 item["title"],
                 item.get("source", "feed"),
+                item.get("description", ""),
                 item.get("score", 0.9),
+                item.get("tags", "[]"),
                 item.get("summary", ""),
                 item.get("status", "kept"),
                 item.get("fetched_at", today),
@@ -266,6 +268,34 @@ class TestGetKeptFinds:
     def test_returns_empty_for_missing_db(self, tmp_path):
         finds = get_kept_finds(str(tmp_path / "nonexistent.db"), limit=5)
         assert finds == []
+
+    def test_filters_by_tag(self, tmp_path):
+        db = _make_discovery_db(tmp_path, [
+            {"url": "https://a.com", "title": "Post A", "tags": '["sqlite", "offline"]'},
+            {"url": "https://b.com", "title": "Post B", "tags": '["frontend", "css"]'},
+        ])
+        finds = get_kept_finds(db, limit=5, tags=["sqlite"])
+        assert len(finds) == 1
+        assert finds[0].title == "Post A"
+        assert "sqlite" in finds[0].tags
+
+    def test_filters_by_topic(self, tmp_path):
+        db = _make_discovery_db(tmp_path, [
+            {"url": "https://a.com", "title": "Understanding Vector Databases", "summary": "Embeddings overview"},
+            {"url": "https://b.com", "title": "CSS Grid Tips", "summary": "Layout tricks"},
+        ])
+        finds = get_kept_finds(db, limit=5, topics=["vector", "embeddings"])
+        assert len(finds) == 1
+        assert finds[0].title == "Understanding Vector Databases"
+
+    def test_topic_fallback_when_no_match(self, tmp_path):
+        db = _make_discovery_db(tmp_path, [
+            {"url": "https://a.com", "title": "Post A", "summary": "Recent post"},
+        ])
+        # Searching for nonexistent topic falls back to recent kept finds
+        finds = get_kept_finds(db, limit=5, topics=["nonexistent"])
+        assert len(finds) == 1
+        assert finds[0].title == "Post A"
 
 
 # ---------------------------------------------------------------------------
