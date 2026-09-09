@@ -111,12 +111,12 @@ Five CTAs cycle by issue number (issue 1 → CTA 1, issue 6 → CTA 1 again):
 ```
 newsletter-prep-assistant/
 ├── src/
-│   ├── main.py
 │   └── newsletter_prep/
+│       ├── cli.py        # Typer CLI
+│       ├── core.py       # Core prep orchestration
 │       ├── cta.py        # CTA rotation
 │       ├── sources.py    # Vault, DB, and daily note readers
-│       ├── renderer.py   # Prep kit markdown formatter
-│       └── logic.py      # Typer CLI
+│       └── renderer.py   # Prep kit markdown formatter
 ├── tests/
 │   ├── test_cta.py
 │   ├── test_sources.py
