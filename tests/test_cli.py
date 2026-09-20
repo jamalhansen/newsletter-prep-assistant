@@ -1,14 +1,16 @@
-from datetime import date
+from datetime import datetime
+
 from typer.testing import CliRunner
+
 from newsletter_prep.cli import app
-from tests.test_sources import _make_discovery_db, _make_vault, _make_issue_folder
+from tests.test_sources import _make_discovery_db, _make_issue_folder, _make_vault
 
 runner = CliRunner()
 
 
 def test_cli_prep_with_topics_and_tags(tmp_path):
     vault = _make_vault(tmp_path)
-    today = date.today().isoformat()
+    today = datetime.now().astimezone().date().isoformat()
     _make_issue_folder(
         vault / "_newsletter",
         1,

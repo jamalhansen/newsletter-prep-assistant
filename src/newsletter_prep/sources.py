@@ -6,17 +6,19 @@ Reads from:
 """
 
 import json
+import logging
 import os
 import re
 import sqlite3
 import tomllib
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import frontmatter
 from local_first_common.models import ContentMetadata
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -100,6 +102,7 @@ def find_next_issue(vault_root: Path, newsletter_dir: str = "_newsletter") -> Is
         try:
             post = frontmatter.load(str(draft))
         except Exception:
+            logger.warning("Skipping unparseable draft %s", draft, exc_info=True)
             continue
         meta = ContentMetadata.from_metadata(post.metadata)
         published = meta.published_date is not None or meta.status == "published"
@@ -270,7 +273,9 @@ def resolve_discovery_db_path(override: str | None = None) -> str:
                 if store:
                     return os.path.expanduser(store)
             except Exception:
-                pass
+                logger.warning(
+                    "Skipping unreadable config %s", toml_path, exc_info=True
+                )
 
     return os.path.expanduser("~/.content-discovery.db")
 
@@ -358,7 +363,7 @@ def get_kept_finds(
                 conn.close()
                 return matched
 
-        cutoff = (date.today() - timedelta(days=since_days)).isoformat()
+        cutoff = (datetime.now().astimezone().date() - timedelta(days=since_days)).isoformat()
         rows = conn.execute(
             """
             SELECT title, url, summary, source, reviewed_at, tags

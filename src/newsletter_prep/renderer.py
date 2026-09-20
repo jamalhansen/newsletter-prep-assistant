@@ -8,7 +8,7 @@ Output format mirrors the newsletter structure from Newsletter Strategy.md:
   5. CTA suggestion
 """
 
-from datetime import date
+from datetime import date, datetime
 
 from .cta import CTA
 from .sources import BlogPost, Find, IssueMeta
@@ -29,7 +29,7 @@ def render_prep_kit(
     sections.append(
         f"# Newsletter Prep Kit — Issue {issue.issue_number}\n"
         f"Week of {week_start.isoformat()} → {week_end.isoformat()}\n"
-        f"Generated: {date.today().isoformat()}"
+        f"Generated: {datetime.now().astimezone().date().isoformat()}"
     )
 
     # ── Blog post ────────────────────────────────────────────────────────────

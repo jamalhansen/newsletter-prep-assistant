@@ -1,32 +1,31 @@
 """Typer CLI for newsletter-prep-assistant."""
 
 import re
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
-
-from local_first_common.tracking import register_tool
 from local_first_common.cli import init_config_option
+from local_first_common.tracking import register_tool
 
+from .core import (
+    VaultResolutionError,
+    _default_output_path,
+    _resolve_existing_vault_or_raise,
+    _should_write_to_vault,
+    _week_dates,
+)
 from .cta import get_cta
 from .renderer import render_prep_kit
 from .sources import (
+    find_blog_post_file,
     find_issue_by_number,
     find_next_issue,
-    find_blog_post_file,
     get_daily_note_bullets,
     get_kept_finds,
     read_blog_post,
     resolve_discovery_db_path,
-)
-from .core import (
-    VaultResolutionError,
-    _week_dates,
-    _resolve_existing_vault_or_raise,
-    _should_write_to_vault,
-    _default_output_path,
 )
 
 TOOL_NAME = "newsletter-prep-assistant"
@@ -38,13 +37,13 @@ app = typer.Typer(help="Assemble raw materials for the weekly newsletter.")
 
 @app.command()
 def prep(
-    issue: Optional[int] = typer.Option(
+    issue: int | None = typer.Option(
         None,
         "--issue",
         "-i",
         help="Issue number. Default: auto-detect next unpublished issue.",
     ),
-    vault: Optional[str] = typer.Option(
+    vault: str | None = typer.Option(
         None,
         "--vault",
         "-V",
@@ -57,7 +56,7 @@ def prep(
         help="Newsletter subfolder inside the vault.",
         envvar="NEWSLETTER_DIR",
     ),
-    discovery_db: Optional[str] = typer.Option(
+    discovery_db: str | None = typer.Option(
         None,
         "--discovery-db",
         "-d",
@@ -78,24 +77,28 @@ def prep(
         help="Look back N days for kept finds.",
         envvar="NEWSLETTER_FINDS_SINCE_DAYS",
     ),
-    topic: Optional[list[str]] = typer.Option(
-        None,
-        "--topic",
-        "-t",
-        help="Filter kept finds by topic keyword(s). Repeatable.",
-    ),
-    tag: Optional[list[str]] = typer.Option(
-        None,
-        "--tag",
-        help="Filter kept finds by tag(s). Repeatable.",
-    ),
+    topic: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--topic",
+            "-t",
+            help="Filter kept finds by topic keyword(s). Repeatable.",
+        ),
+    ] = None,
+    tag: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--tag",
+            help="Filter kept finds by tag(s). Repeatable.",
+        ),
+    ] = None,
     daily_notes_subdir: str = typer.Option(
         "Timeline",
         "--notes-subdir",
         help="Vault subdirectory containing daily notes.",
         envvar="DAILY_NOTES_SUBDIR",
     ),
-    output: Optional[str] = typer.Option(
+    output: str | None = typer.Option(
         None,
         "--output",
         "-o",
@@ -164,7 +167,7 @@ def prep(
             )
 
     # ── Week dates ───────────────────────────────────────────────────────────
-    week_start, week_end = _week_dates(date.today())
+    week_start, week_end = _week_dates(datetime.now().astimezone().date())
 
     # ── Kept finds ───────────────────────────────────────────────────────────
     db_path = resolve_discovery_db_path(discovery_db)

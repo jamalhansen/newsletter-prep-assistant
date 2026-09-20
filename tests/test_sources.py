@@ -1,18 +1,18 @@
 """Tests for newsletter_prep.sources."""
 
 import sqlite3
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from newsletter_prep.sources import (
     _strip_wikilink,
-    resolve_discovery_db_path,
     find_blog_post_file,
     find_issue_by_number,
     find_next_issue,
     get_daily_note_bullets,
     get_kept_finds,
     read_blog_post,
+    resolve_discovery_db_path,
 )
 
 # ---------------------------------------------------------------------------
@@ -214,7 +214,7 @@ def _make_discovery_db(path: Path, items: list[dict]) -> str:
             reviewed_at TEXT
         )"""
     )
-    today = date.today().isoformat()
+    today = datetime.now().astimezone().date().isoformat()
     for item in items:
         conn.execute(
             "INSERT INTO items (url, title, source, description, score, tags, summary, status, fetched_at, reviewed_at) "
@@ -354,7 +354,7 @@ class TestResolveDiscoveryDbPath:
 class TestGetDailyNoteBullets:
     def test_extracts_bullets(self, tmp_path):
         vault = _make_vault(tmp_path)
-        today = date.today()
+        today = datetime.now().astimezone().date()
         note = vault / "Timeline" / f"{today.isoformat()}.md"
         note.write_text(
             "# Monday\n\n- Did some work\n- Learned something\n\n## Section\n\n- Another thing",
@@ -366,7 +366,7 @@ class TestGetDailyNoteBullets:
 
     def test_skips_bare_checkboxes(self, tmp_path):
         vault = _make_vault(tmp_path)
-        today = date.today()
+        today = datetime.now().astimezone().date()
         note = vault / "Timeline" / f"{today.isoformat()}.md"
         note.write_text("- [ ] \n- [x] \n- Real bullet with content", encoding="utf-8")
         bullets = get_daily_note_bullets(vault, [today])
@@ -375,13 +375,13 @@ class TestGetDailyNoteBullets:
 
     def test_skips_missing_notes(self, tmp_path):
         vault = _make_vault(tmp_path)
-        yesterday = date.today() - timedelta(days=1)
+        yesterday = datetime.now().astimezone().date() - timedelta(days=1)
         bullets = get_daily_note_bullets(vault, [yesterday])
         assert bullets == []
 
     def test_includes_date_prefix(self, tmp_path):
         vault = _make_vault(tmp_path)
-        today = date.today()
+        today = datetime.now().astimezone().date()
         note = vault / "Timeline" / f"{today.isoformat()}.md"
         note.write_text("- A bullet point", encoding="utf-8")
         bullets = get_daily_note_bullets(vault, [today])
