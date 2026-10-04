@@ -124,7 +124,7 @@ def prep(
         vault_root = _resolve_existing_vault_or_raise(vault)
     except VaultResolutionError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # ── Find issue ───────────────────────────────────────────────────────────
     if issue is not None:
