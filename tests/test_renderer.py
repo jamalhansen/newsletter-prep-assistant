@@ -136,10 +136,7 @@ class TestRenderPrepKit:
 
     def test_multiple_finds_shows_count(self, tmp_path):
         issue = _make_issue(tmp_path)
-        finds = [
-            Find(title=f"Article {i}", url=f"https://a{i}.com", summary="", source="feed")
-            for i in range(3)
-        ]
+        finds = [Find(title=f"Article {i}", url=f"https://a{i}.com", summary="", source="feed") for i in range(3)]
         kit = render_prep_kit(
             issue=issue,
             blog_posts=[],

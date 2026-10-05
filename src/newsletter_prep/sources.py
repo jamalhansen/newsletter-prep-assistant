@@ -197,18 +197,9 @@ def read_blog_post(file_path: Path) -> BlogPost:
     """Extract BlogPost metadata from a vault file."""
     post = frontmatter.load(str(file_path))
     meta = ContentMetadata.from_metadata(post.metadata)
-    title = (
-        meta.title
-        or _extract_h1(post.content)
-        or file_path.stem
-    )
+    title = meta.title or _extract_h1(post.content) or file_path.stem
     # canonical_url is standard; url/permalink are legacy aliases kept for older posts
-    url = (
-        meta.canonical_url
-        or getattr(meta, "url", None)
-        or getattr(meta, "permalink", None)
-        or ""
-    )
+    url = meta.canonical_url or getattr(meta, "url", None) or getattr(meta, "permalink", None) or ""
     excerpt = _extract_excerpt(post.content)
     return BlogPost(title=str(title), url=str(url), slug=file_path.stem, excerpt=excerpt)
 
@@ -273,9 +264,7 @@ def resolve_discovery_db_path(override: str | None = None) -> str:
                 if store:
                     return os.path.expanduser(store)
             except Exception:
-                logger.warning(
-                    "Skipping unreadable config %s", toml_path, exc_info=True
-                )
+                logger.warning("Skipping unreadable config %s", toml_path, exc_info=True)
 
     return os.path.expanduser("~/.content-discovery.db")
 
@@ -323,10 +312,7 @@ def get_kept_finds(
             for row in rows:
                 item_tags: list[str] = []
                 try:
-                    item_tags = [
-                        str(t).strip().lower()
-                        for t in json.loads(row["tags"] or "[]")
-                    ]
+                    item_tags = [str(t).strip().lower() for t in json.loads(row["tags"] or "[]")]
                 except (json.JSONDecodeError, TypeError, KeyError):
                     pass
 
@@ -336,13 +322,15 @@ def get_kept_finds(
 
                 topic_match = False
                 if target_topics:
-                    searchable = " ".join([
-                        row["title"] or "",
-                        row["summary"] or "",
-                        row["description"] or "",
-                        row["source"] or "",
-                        " ".join(item_tags),
-                    ]).lower()
+                    searchable = " ".join(
+                        [
+                            row["title"] or "",
+                            row["summary"] or "",
+                            row["description"] or "",
+                            row["source"] or "",
+                            " ".join(item_tags),
+                        ]
+                    ).lower()
                     topic_match = any(t in searchable for t in target_topics)
 
                 if (target_tags and tag_match) or (target_topics and topic_match):
@@ -383,10 +371,7 @@ def get_kept_finds(
     for row in rows:
         item_tags = []
         try:
-            item_tags = [
-                str(t).strip().lower()
-                for t in json.loads(row["tags"] or "[]")
-            ]
+            item_tags = [str(t).strip().lower() for t in json.loads(row["tags"] or "[]")]
         except (json.JSONDecodeError, TypeError, KeyError):
             pass
         results.append(

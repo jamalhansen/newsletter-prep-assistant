@@ -12,11 +12,12 @@ class TestResolveExistingVaultOrRaise:
         assert resolved == Path(tmp_path)
 
     def test_raises_when_find_vault_root_fails(self):
-        with patch(
-            "newsletter_prep.core.find_vault_root",
-            side_effect=RuntimeError("not found"),
-        ), pytest.raises(
-            VaultResolutionError, match="could not locate Obsidian vault"
+        with (
+            patch(
+                "newsletter_prep.core.find_vault_root",
+                side_effect=RuntimeError("not found"),
+            ),
+            pytest.raises(VaultResolutionError, match="could not locate Obsidian vault"),
         ):
             _resolve_existing_vault_or_raise(None)
 

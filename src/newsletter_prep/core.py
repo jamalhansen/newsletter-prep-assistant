@@ -31,9 +31,7 @@ def _resolve_existing_vault_or_raise(vault: str | None) -> Path:
         try:
             vault_root = find_vault_root()
         except Exception as e:
-            raise VaultResolutionError(
-                f"could not locate Obsidian vault. Set OBSIDIAN_VAULT_PATH. ({e})"
-            ) from e
+            raise VaultResolutionError(f"could not locate Obsidian vault. Set OBSIDIAN_VAULT_PATH. ({e})") from e
 
     if not vault_root.exists():
         raise VaultResolutionError(f"vault path does not exist: {vault_root}")

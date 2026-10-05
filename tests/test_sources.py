@@ -195,6 +195,7 @@ class TestReadBlogPost:
 # get_kept_finds
 # ---------------------------------------------------------------------------
 
+
 def _make_discovery_db(path: Path, items: list[dict]) -> str:
     db = str(path / "discovery.db")
     conn = sqlite3.connect(db)
@@ -239,29 +240,32 @@ def _make_discovery_db(path: Path, items: list[dict]) -> str:
 
 class TestGetKeptFinds:
     def test_returns_kept_items(self, tmp_path):
-        db = _make_discovery_db(tmp_path, [
-            {"url": "https://a.com", "title": "Post A", "summary": "About A"},
-            {"url": "https://b.com", "title": "Post B", "summary": "About B"},
-        ])
+        db = _make_discovery_db(
+            tmp_path,
+            [
+                {"url": "https://a.com", "title": "Post A", "summary": "About A"},
+                {"url": "https://b.com", "title": "Post B", "summary": "About B"},
+            ],
+        )
         finds = get_kept_finds(db, limit=5, since_days=30)
         assert len(finds) == 2
         titles = {f.title for f in finds}
         assert "Post A" in titles
 
     def test_excludes_dismissed(self, tmp_path):
-        db = _make_discovery_db(tmp_path, [
-            {"url": "https://a.com", "title": "Kept", "status": "kept"},
-            {"url": "https://b.com", "title": "Dismissed", "status": "dismissed"},
-        ])
+        db = _make_discovery_db(
+            tmp_path,
+            [
+                {"url": "https://a.com", "title": "Kept", "status": "kept"},
+                {"url": "https://b.com", "title": "Dismissed", "status": "dismissed"},
+            ],
+        )
         finds = get_kept_finds(db, limit=5, since_days=30)
         assert len(finds) == 1
         assert finds[0].title == "Kept"
 
     def test_respects_limit(self, tmp_path):
-        db = _make_discovery_db(tmp_path, [
-            {"url": f"https://item{i}.com", "title": f"Item {i}"}
-            for i in range(10)
-        ])
+        db = _make_discovery_db(tmp_path, [{"url": f"https://item{i}.com", "title": f"Item {i}"} for i in range(10)])
         finds = get_kept_finds(db, limit=3, since_days=30)
         assert len(finds) == 3
 
@@ -270,28 +274,37 @@ class TestGetKeptFinds:
         assert finds == []
 
     def test_filters_by_tag(self, tmp_path):
-        db = _make_discovery_db(tmp_path, [
-            {"url": "https://a.com", "title": "Post A", "tags": '["sqlite", "offline"]'},
-            {"url": "https://b.com", "title": "Post B", "tags": '["frontend", "css"]'},
-        ])
+        db = _make_discovery_db(
+            tmp_path,
+            [
+                {"url": "https://a.com", "title": "Post A", "tags": '["sqlite", "offline"]'},
+                {"url": "https://b.com", "title": "Post B", "tags": '["frontend", "css"]'},
+            ],
+        )
         finds = get_kept_finds(db, limit=5, tags=["sqlite"])
         assert len(finds) == 1
         assert finds[0].title == "Post A"
         assert "sqlite" in finds[0].tags
 
     def test_filters_by_topic(self, tmp_path):
-        db = _make_discovery_db(tmp_path, [
-            {"url": "https://a.com", "title": "Understanding Vector Databases", "summary": "Embeddings overview"},
-            {"url": "https://b.com", "title": "CSS Grid Tips", "summary": "Layout tricks"},
-        ])
+        db = _make_discovery_db(
+            tmp_path,
+            [
+                {"url": "https://a.com", "title": "Understanding Vector Databases", "summary": "Embeddings overview"},
+                {"url": "https://b.com", "title": "CSS Grid Tips", "summary": "Layout tricks"},
+            ],
+        )
         finds = get_kept_finds(db, limit=5, topics=["vector", "embeddings"])
         assert len(finds) == 1
         assert finds[0].title == "Understanding Vector Databases"
 
     def test_topic_fallback_when_no_match(self, tmp_path):
-        db = _make_discovery_db(tmp_path, [
-            {"url": "https://a.com", "title": "Post A", "summary": "Recent post"},
-        ])
+        db = _make_discovery_db(
+            tmp_path,
+            [
+                {"url": "https://a.com", "title": "Post A", "summary": "Recent post"},
+            ],
+        )
         # Searching for nonexistent topic falls back to recent kept finds
         finds = get_kept_finds(db, limit=5, topics=["nonexistent"])
         assert len(finds) == 1
@@ -329,6 +342,7 @@ class TestResolveDiscoveryDbPath:
         toml.write_text('[settings]\nstore = "~/sync/discovery.db"\n', encoding="utf-8")
 
         import newsletter_prep.sources as src_module
+
         orig = src_module._TOML_SEARCH_PATHS
         src_module._TOML_SEARCH_PATHS = [toml]
         try:
@@ -342,6 +356,7 @@ class TestResolveDiscoveryDbPath:
         monkeypatch.delenv("CONTENT_DISCOVERY_STORE", raising=False)
         monkeypatch.delenv("CONTENT_DISCOVERY_DB", raising=False)
         import newsletter_prep.sources as src_module
+
         orig = src_module._TOML_SEARCH_PATHS
         src_module._TOML_SEARCH_PATHS = []  # no toml files
         try:

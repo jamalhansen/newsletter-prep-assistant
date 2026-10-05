@@ -44,10 +44,7 @@ def render_prep_kit(
                 lines.append(f"> {bp.excerpt}")
         sections.append("\n".join(lines))
     else:
-        sections.append(
-            "## This week on the blog\n\n"
-            "_No blog post linked in issue frontmatter (`blog_post:` field)._"
-        )
+        sections.append("## This week on the blog\n\n_No blog post linked in issue frontmatter (`blog_post:` field)._")
 
     # ── Kept finds ───────────────────────────────────────────────────────────
     if finds:
@@ -62,10 +59,7 @@ def render_prep_kit(
             lines.append(line)
         sections.append("\n".join(lines))
     else:
-        sections.append(
-            "## Links worth your time\n\n"
-            "_No recent kept items found in content-discovery DB._"
-        )
+        sections.append("## Links worth your time\n\n_No recent kept items found in content-discovery DB._")
 
     # ── Daily note bullets ───────────────────────────────────────────────────
     if daily_bullets:
@@ -73,16 +67,10 @@ def render_prep_kit(
         lines.extend(daily_bullets)
         sections.append("\n".join(lines))
     else:
-        sections.append(
-            "## From your daily notes\n\n"
-            "_No daily notes found for this week._"
-        )
+        sections.append("## From your daily notes\n\n_No daily notes found for this week._")
 
     # ── CTA ──────────────────────────────────────────────────────────────────
-    sections.append(
-        f"## CTA suggestion (#{cta.index} of {cta.total})\n\n"
-        f"{cta.text}"
-    )
+    sections.append(f"## CTA suggestion (#{cta.index} of {cta.total})\n\n{cta.text}")
 
     # ── Footer ───────────────────────────────────────────────────────────────
     sections.append(

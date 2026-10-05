@@ -104,12 +104,8 @@ def prep(
         "-o",
         help="Write prep kit to this file. Default: print to stdout.",
     ),
-    dry_run: bool = typer.Option(
-        False, "--dry-run", "-n", help="Print prep kit to stdout, do not write files."
-    ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Show what each source found."
-    ),
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Print prep kit to stdout, do not write files."),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show what each source found."),
     init_config: Annotated[bool, init_config_option(TOOL_NAME, DEFAULTS)] = False,
 ) -> None:
     """Assemble the newsletter prep kit for the next (or specified) issue.

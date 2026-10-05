@@ -18,28 +18,35 @@ def test_cli_prep_with_topics_and_tags(tmp_path):
         content="---\nstatus: draft\nblog_post: [[my-post]]\n---\nDraft content",
     )
 
-    db_path = _make_discovery_db(tmp_path, [
-        {
-            "url": "https://example.com/topic-match",
-            "title": "Topic Matched Article",
-            "tags": '["ai", "local-first"]',
-            "summary": "Summary about local AI",
-        },
-        {
-            "url": "https://example.com/other",
-            "title": "Other Article",
-            "tags": '["misc"]',
-            "summary": "Other summary",
-        },
-    ])
+    db_path = _make_discovery_db(
+        tmp_path,
+        [
+            {
+                "url": "https://example.com/topic-match",
+                "title": "Topic Matched Article",
+                "tags": '["ai", "local-first"]',
+                "summary": "Summary about local AI",
+            },
+            {
+                "url": "https://example.com/other",
+                "title": "Other Article",
+                "tags": '["misc"]',
+                "summary": "Other summary",
+            },
+        ],
+    )
 
     result = runner.invoke(
         app,
         [
-            "--vault", str(vault),
-            "--discovery-db", db_path,
-            "--topic", "local",
-            "--tag", "ai",
+            "--vault",
+            str(vault),
+            "--discovery-db",
+            db_path,
+            "--topic",
+            "local",
+            "--tag",
+            "ai",
             "--dry-run",
         ],
     )
