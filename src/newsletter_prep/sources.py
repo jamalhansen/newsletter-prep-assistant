@@ -159,7 +159,7 @@ def _parse_issue_meta(num: int, draft: Path, folder: Path, post: frontmatter.Pos
 
     meta = ContentMetadata.from_metadata(post.metadata)
     return IssueMeta(
-        issue_number=post.metadata.get("issue_number") or num,
+        issue_number=int(str(post.metadata.get("issue_number") or num)),  # frontmatter may quote it: "12"
         draft_path=draft,
         issue_folder=folder,
         blog_post_wikilinks=blog_links,
